@@ -136,4 +136,9 @@ public class GameController {
         redirect.addFlashAttribute("success", "Đã gửi từ! (Chế độ demo)");
         return "redirect:/solo";
     }
+    @GetMapping("/room/{roomId}/status")
+    @ResponseBody
+    public Room roomStatus(@PathVariable String roomId, HttpSession session) {
+        return roomService.getRoom(roomId);
+    }
 }

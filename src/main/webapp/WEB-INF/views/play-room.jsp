@@ -100,7 +100,7 @@
         <small>(Gửi mã phòng này cho bạn để cùng chơi!)</small>
     </div>
 
-    <div class="players-list">
+    <div class="players-list" id="players-box">
         <b>Người trong phòng:</b>
         <c:forEach var="player" items="${room.players}" varStatus="status">
             <span style="color: ${player == username ? '#00b894' : '#636e72'};">
@@ -117,7 +117,7 @@
         </c:forEach>
     </div>
 
-    <div class="player-turn">
+    <div class="player-turn" id="current-player-box">
         <c:choose>
             <c:when test="${not empty currentPlayer}">
                 Đến lượt: <b>${currentPlayer}</b>
@@ -127,7 +127,7 @@
             </c:otherwise>
         </c:choose>
     </div>
-    <div class="game-history">
+    <div class="game-history" id="history-box">
         <b>Lịch sử từ:</b>
         <c:choose>
             <c:when test="${not empty wordHistory}">
@@ -152,18 +152,14 @@
         </c:choose>
     </div>
 
-    <c:if test="${isYourTurn}">
-        <form class="input-form" action="/room/${room.roomId}/play" method="post">
-            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-            <input type="text" name="word" placeholder="Nhập từ của bạn..." autocomplete="off" required />
-            <input type="submit" value="Gửi" />
-        </form>
-    </c:if>
-    <c:if test="${!isYourTurn}">
-        <div style="text-align:center;color:#636e72;margin:16px 0;">
-            Đang chờ người chơi khác...
-        </div>
-    </c:if>
+    <form class="input-form" id="word-form" action="/room/${room.roomId}/play" method="post" style="<c:if test='${!isYourTurn}'>display:none;</c:if>">
+        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+        <input type="text" name="word" id="word-input" placeholder="Nhập từ của bạn..." autocomplete="off" required />
+        <input type="submit" id="submit-btn" value="Gửi" />
+    </form>
+    <div id="wait-box" style="text-align:center;color:#636e72;margin:16px 0;<c:if test='${isYourTurn}'>display:none;</c:if>">
+        Đang chờ người chơi khác...
+    </div>
 
     <form action="/room/${room.roomId}/reset" method="post">
         <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
@@ -171,10 +167,10 @@
     </form>
 
     <c:if test="${not empty error}">
-        <div class="error">${error}</div>
+        <div class="error" id="error-box">${error}</div>
     </c:if>
     <c:if test="${not empty success}">
-        <div class="success">${success}</div>
+        <div class="success" id="success-box">${success}</div>
     </c:if>
 </div>
 <script>
@@ -183,6 +179,55 @@ function copyRoomId() {
     navigator.clipboard.writeText(roomId);
     alert("Đã copy mã phòng: " + roomId);
 }
+
+let username = "${username}";
+function reloadRoomData() {
+    fetch("/room/${room.roomId}/status")
+        .then(response => response.json())
+        .then(data => {
+            // Cập nhật danh sách người chơi
+            let playersHtml = "<b>Người trong phòng:</b> ";
+            for (let i = 0; i < data.players.length; i++) {
+                playersHtml += "<span style='color:" +
+                    (data.players[i] === username ? "#00b894" : "#636e72") + ";'>" +
+                    data.players[i] + (data.players[i] === username ? " (Bạn)" : "") + "</span>";
+                if (i < data.players.length - 1) playersHtml += " - ";
+            }
+            document.getElementById("players-box").innerHTML = playersHtml;
+
+            // Cập nhật lượt chơi
+            document.getElementById("current-player-box").innerHTML = "Đến lượt: <b>" + data.players[data.turnIndex] + "</b>";
+
+            // Cập nhật lịch sử từ
+            let historyHtml = "<b>Lịch sử từ:</b> ";
+            if (data.wordHistory.length > 0) {
+                for (let i = 0; i < data.wordHistory.length; i++) {
+                    historyHtml += "<span>";
+                    if (data.players) {
+                        historyHtml += "<b>" + data.players[i % 2] + ":</b> ";
+                    } else {
+                        historyHtml += "<b>Người chơi " + (i % 2 + 1) + ":</b> ";
+                    }
+                    historyHtml += data.wordHistory[i] + "</span>";
+                    if (i < data.wordHistory.length - 1) historyHtml += " &rarr; ";
+                }
+            } else {
+                historyHtml += "<em>Chưa có từ nào, hãy bắt đầu!</em>";
+            }
+            document.getElementById("history-box").innerHTML = historyHtml;
+
+            // Hiển thị/ẩn form nhập từ và box chờ
+            let isYourTurn = data.players[data.turnIndex] === username;
+            document.getElementById("word-form").style.display = isYourTurn ? "flex" : "none";
+            document.getElementById("wait-box").style.display = isYourTurn ? "none" : "block";
+            // Reset input khi tới lượt mình
+            if (isYourTurn) {
+                document.getElementById("word-input").value = "";
+                document.getElementById("word-input").focus();
+            }
+        });
+}
+setInterval(reloadRoomData, 10000);
 </script>
 </body>
 </html>
