@@ -10,14 +10,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: blue;
-      --primary-light: #E7F4E7;
-      --text: #333333;
-      --text-light: #666666;
-      --bg: #F5F5F5;
+      --primary: #4285F4; /* Màu xanh Google */
+      --primary-light: #E8F0FE;
+      --primary-dark: #3367D6;
+      --secondary: #34A853; /* Màu xanh lá */
+      --text: #202124;
+      --text-light: #5F6368;
+      --bg: #F8F9FA;
       --card: #FFFFFF;
-      --border: #DDDDDD;
-      --highlight: #F0F7F0;
+      --border: #DADCE0;
+      --highlight: #F1F3F4;
+      --error: #EA4335;
     }
 
     body {
@@ -27,50 +30,84 @@
       padding: 20px;
       max-width: 500px;
       margin: 0 auto;
+      line-height: 1.5;
     }
 
     .game-container {
       background: var(--card);
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 25px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      box-shadow: 0 1px 2px rgba(60,64,67,0.1), 0 2px 6px rgba(60,64,67,0.15);
+      position: relative;
+    }
+
+    .back-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    .back-btn:hover {
+      background: var(--primary-light);
+    }
+
+    .back-btn svg {
+      width: 18px;
+      height: 18px;
     }
 
     h1 {
-      color: var(--primary);
+      color: var(--text);
       text-align: center;
-      margin-bottom: 25px;
+      margin: 10px 0 25px;
       font-size: 1.5rem;
       font-weight: 600;
     }
 
     .score-display {
       background: var(--primary-light);
-      color: var(--primary);
-      padding: 8px 15px;
+      color: var(--primary-dark);
+      padding: 8px 16px;
       border-radius: 20px;
       display: inline-block;
       margin-bottom: 20px;
       font-weight: 500;
       float: right;
+      font-size: 0.95rem;
+      border: 1px solid var(--border);
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
       margin: 20px 0;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
 
     th, td {
       padding: 12px 10px;
       text-align: center;
-      border-bottom: 1px solid var(--border);
+      border: 1px solid var(--border);
     }
 
     th {
       background: var(--primary-light);
-      color: var(--primary);
+      color: var(--primary-dark);
       font-weight: 500;
+      font-size: 0.9rem;
     }
 
     tr:nth-child(even) {
@@ -85,25 +122,38 @@
 
     input[type="text"] {
       flex: 1;
-      padding: 10px 15px;
+      padding: 12px 16px;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 1rem;
+      transition: border 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(66,133,244,0.2);
+      outline: none;
     }
 
     button {
       background: var(--primary);
       color: white;
       border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
+      padding: 12px 20px;
+      border-radius: 8px;
       cursor: pointer;
       font-weight: 500;
-      transition: background 0.2s;
+      transition: background 0.2s, transform 0.1s;
+      font-size: 0.95rem;
     }
 
     button:hover {
-      background: red;
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
     }
 
     .reset-btn {
@@ -120,20 +170,31 @@
 
     .bot-response {
       margin: 15px 0;
-      padding: 12px;
-      background: #F8F8F8;
-      border-radius: 6px;
+      padding: 14px;
+      background: var(--highlight);
+      border-radius: 8px;
       color: var(--text);
       text-align: center;
       font-style: italic;
+      border-left: 4px solid var(--secondary);
     }
 
     .bot-response b {
-      color: var(--primary);
+      color: var(--secondary);
       font-style: normal;
     }
 
+    .empty-state {
+      color: var(--text-light);
+      text-align: center;
+      padding: 20px;
+    }
+
     @media (max-width: 480px) {
+      .game-container {
+        padding: 20px 15px;
+      }
+
       .input-area {
         flex-direction: column;
       }
@@ -141,11 +202,24 @@
       button {
         width: 100%;
       }
+
+      .back-btn {
+        top: 15px;
+        left: 15px;
+      }
     }
   </style>
 </head>
 <body>
 <div class="game-container">
+  <!-- Nút quay lại trang chủ -->
+  <button class="back-btn" onclick="window.location.href='home'">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+    </svg>
+    Trang chủ
+  </button>
+
   <h1>Chơi Nối Chữ với Bot</h1>
 
   <div class="score-display">
@@ -179,7 +253,7 @@
       </c:when>
       <c:otherwise>
         <tr>
-          <td colspan="3" style="color: var(--text-light);">Chưa có từ nào, hãy bắt đầu!</td>
+          <td colspan="3" class="empty-state">Chưa có từ nào, hãy bắt đầu!</td>
         </tr>
       </c:otherwise>
     </c:choose>
