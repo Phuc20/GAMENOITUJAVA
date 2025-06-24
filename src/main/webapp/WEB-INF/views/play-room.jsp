@@ -25,6 +25,12 @@
             color: #2d3436;
             text-align: center;
         }
+        .room-id {
+            text-align: center;
+            font-size: 15px;
+            color: #636e72;
+            margin-bottom: 15px;
+        }
         .game-history {
             margin: 18px 0 28px 0;
             background: #f1f2f6;
@@ -77,11 +83,40 @@
             margin-bottom: 14px;
             font-size: 16px;
         }
+        .players-list {
+            text-align: center;
+            font-size: 15px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>Chơi Nối Chữ 2 Người</h1>
+    <div class="room-id">
+        Mã phòng: <b id="roomId">${room.roomId}</b>
+        <button onclick="copyRoomId()" style="margin-left:8px;padding:2px 8px;border:none;background:#00b894;color:#fff;border-radius:3px;cursor:pointer;">Copy</button>
+        <br/>
+        <small>(Gửi mã phòng này cho bạn để cùng chơi!)</small>
+    </div>
+
+    <div class="players-list">
+        <b>Người trong phòng:</b>
+        <c:forEach var="player" items="${room.players}" varStatus="status">
+            <span style="color: ${player == username ? '#00b894' : '#636e72'};">
+                <c:choose>
+                    <c:when test="${player == username}">
+                        ${player} (Bạn)
+                    </c:when>
+                    <c:otherwise>
+                        ${player}
+                    </c:otherwise>
+                </c:choose>
+            </span>
+            <c:if test="${!status.last}"> - </c:if>
+        </c:forEach>
+    </div>
+
     <div class="player-turn">
         <c:choose>
             <c:when test="${not empty currentPlayer}">
@@ -117,12 +152,21 @@
         </c:choose>
     </div>
 
-    <form class="input-form" action="play-user" method="post">
-        <input type="text" name="word" placeholder="Nhập từ của bạn..." autocomplete="off" required />
-        <input type="submit" value="Gửi" />
-    </form>
+    <c:if test="${isYourTurn}">
+        <form class="input-form" action="/room/${room.roomId}/play" method="post">
+            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+            <input type="text" name="word" placeholder="Nhập từ của bạn..." autocomplete="off" required />
+            <input type="submit" value="Gửi" />
+        </form>
+    </c:if>
+    <c:if test="${!isYourTurn}">
+        <div style="text-align:center;color:#636e72;margin:16px 0;">
+            Đang chờ người chơi khác...
+        </div>
+    </c:if>
 
-    <form action="reset-user" method="post">
+    <form action="/room/${room.roomId}/reset" method="post">
+        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
         <button class="reset-btn" type="submit">Chơi lại</button>
     </form>
 
@@ -133,5 +177,12 @@
         <div class="success">${success}</div>
     </c:if>
 </div>
+<script>
+function copyRoomId() {
+    const roomId = document.getElementById("roomId").innerText;
+    navigator.clipboard.writeText(roomId);
+    alert("Đã copy mã phòng: " + roomId);
+}
+</script>
 </body>
 </html>

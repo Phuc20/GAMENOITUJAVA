@@ -15,49 +15,64 @@ public class GameController {
     @Autowired
     private RoomService roomService;
 
-    // Xử lý đăng nhập username từ Home hoặc Login (nếu dùng login riêng)
+    // Đăng nhập xong về home
     @PostMapping("/login")
     public String doLogin(@RequestParam String username, HttpSession session) {
         session.setAttribute("username", username.trim());
         return "redirect:/home";
     }
 
-    // Tạo phòng, làm chủ phòng
+    // Trang home (sau đăng nhập)
+    @GetMapping("/home")
+    public String home(HttpSession session, Model model, @ModelAttribute("error") String error) {
+        String username = (String) session.getAttribute("username");
+        model.addAttribute("username", username);
+        if (error != null && !error.isEmpty()) model.addAttribute("error", error);
+        return "home";
+    }
+
     @PostMapping("/room/create")
     public String createRoom(HttpSession session) {
         String username = (String) session.getAttribute("username");
+        if (username == null || username.trim().isEmpty()) {
+            return "redirect:/home";
+        }
         String roomId = roomService.createRoom(username);
         return "redirect:/room/" + roomId;
     }
 
-    // Nhập mã để vào phòng
-    @PostMapping("/room/join")
-    public String joinRoom(@RequestParam String roomId, HttpSession session, RedirectAttributes redirect) {
+    // Nhập mã phòng, chuyển thẳng vào phòng chơi nếu thành công
+    @PostMapping("/room/go")
+    public String goRoom(@RequestParam String roomId, HttpSession session) {
         String username = (String) session.getAttribute("username");
-        Room room = roomService.joinRoom(roomId.trim().toUpperCase(), username);
-        if (room == null) {
-            redirect.addFlashAttribute("error", "Không tìm thấy phòng!");
+        if (username == null || username.trim().isEmpty()) {
             return "redirect:/home";
         }
-        return "redirect:/room/" + roomId.trim().toUpperCase();
+        String code = roomId.trim().toUpperCase();
+        Room room = roomService.joinRoom(code, username);
+        if (room == null) {
+            return "redirect:/home"; // Không báo lỗi, chỉ về lại home nếu mã sai hoặc phòng full
+        }
+        return "redirect:/room/" + code;
     }
 
-    // Trang chơi với người (phòng)
+    // Trang chơi nối từ (cả 2 người sẽ cùng vào trang này)
     @GetMapping("/room/{roomId}")
-    public String playRoom(@PathVariable String roomId, HttpSession session, Model model, RedirectAttributes redirect) {
+    public String playRoom(@PathVariable String roomId, HttpSession session, Model model,
+                           @ModelAttribute("error") String error,
+                           @ModelAttribute("success") String success) {
         String username = (String) session.getAttribute("username");
         Room room = roomService.getRoom(roomId);
-        if (room == null) {
-            redirect.addFlashAttribute("error", "Phòng không tồn tại!");
-            return "redirect:/home";
-        }
-        if (!room.getPlayers().contains(username)) {
-            redirect.addFlashAttribute("error", "Bạn không thuộc phòng này!");
+        if (room == null || !room.getPlayers().contains(username)) {
             return "redirect:/home";
         }
         model.addAttribute("room", room);
         model.addAttribute("username", username);
         model.addAttribute("isYourTurn", room.getPlayers().get(room.getTurnIndex()).equals(username));
+        model.addAttribute("currentPlayer", room.getPlayers().get(room.getTurnIndex()));
+        model.addAttribute("wordHistory", room.getWordHistory());
+        if (error != null && !error.isEmpty()) model.addAttribute("error", error);
+        if (success != null && !success.isEmpty()) model.addAttribute("success", success);
         return "play-room";
     }
 
@@ -74,8 +89,11 @@ public class GameController {
             redirect.addFlashAttribute("error", "Không phải lượt của bạn!");
             return "redirect:/room/" + roomId;
         }
-
         word = word.trim();
+        if (word.isEmpty()) {
+            redirect.addFlashAttribute("error", "Bạn chưa nhập từ!");
+            return "redirect:/room/" + roomId;
+        }
         if (!room.getWordHistory().isEmpty()) {
             String lastWord = room.getWordHistory().get(room.getWordHistory().size() - 1);
             if (lastWord.charAt(lastWord.length() - 1) != word.charAt(0)) {
@@ -87,39 +105,36 @@ public class GameController {
                 return "redirect:/room/" + roomId;
             }
         }
-        room.getWordHistory().add(word);
-        room.setTurnIndex((room.getTurnIndex() + 1) % 2);
+        room.addWord(word);
+        room.setTurnIndex((room.getTurnIndex() + 1) % room.getMaxPlayers());
         redirect.addFlashAttribute("success", "Thêm từ thành công!");
         return "redirect:/room/" + roomId;
     }
 
+    // Reset lại phòng (xóa lịch sử từ)
     @PostMapping("/room/{roomId}/reset")
     public String resetRoom(@PathVariable String roomId, HttpSession session, RedirectAttributes redirect) {
         Room room = roomService.getRoom(roomId);
         if (room != null) {
-            room.getWordHistory().clear();
+            room.clearHistory();
             room.setTurnIndex(0);
             redirect.addFlashAttribute("success", "Đã reset phòng!");
         }
         return "redirect:/room/" + roomId;
     }
 
-    // Chế độ solo chơi với bot (tối giản)
+    // Chế độ solo (demo)
     @GetMapping("/solo")
-    public String solo(HttpSession session, Model model) {
+    public String solo(HttpSession session, Model model, @ModelAttribute("success") String success) {
         String username = (String) session.getAttribute("username");
         if (username == null || username.isEmpty()) username = "Khách";
         model.addAttribute("username", username);
-        // Có thể thêm xử lý trạng thái solo cho user ở đây
+        if (success != null && !success.isEmpty()) model.addAttribute("success", success);
         return "play-bot";
     }
 
-    // Xử lý gửi từ ở chế độ solo (tối giản: bot nối chữ ngẫu nhiên)
     @PostMapping("/solo/play")
     public String soloPlay(@RequestParam String word, HttpSession session, RedirectAttributes redirect) {
-        // Lưu lịch sử vào session hoặc service (tối giản: session)
-        // ... Xử lý giống như với phòng, thêm từ, kiểm tra hợp lệ, bot trả lời v.v.
-        // Tối giản, chỉ demo giao diện
         redirect.addFlashAttribute("success", "Đã gửi từ! (Chế độ demo)");
         return "redirect:/solo";
     }

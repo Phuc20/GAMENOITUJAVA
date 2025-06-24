@@ -98,20 +98,6 @@
       border-radius: 2px;
     }
 
-    .img-banner {
-      width: 100%;
-      max-width: 300px;
-      height: auto;
-      border-radius: 15px;
-      margin: 15px auto 25px;
-      box-shadow: 0 10px 20px rgba(67, 97, 238, 0.2);
-      transition: transform 0.3s ease;
-    }
-
-    .img-banner:hover {
-      transform: scale(1.03);
-    }
-
     .score {
       color: var(--secondary);
       font-size: 1.2rem;
@@ -296,13 +282,21 @@
 
   <div class="sub-label">Chơi với người khác</div>
 
-  <form action="room/create" method="post">
+  <!-- Tạo phòng (luôn là POST, có CSRF nếu dùng Spring Security) -->
+  <form action="/room/create" method="post">
+    <c:if test="${not empty _csrf}">
+      <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+    </c:if>
     <button type="submit" class="btn btn-secondary">
-      <span style="display: inline-block; transform: translateY(2px);">🎮</span> Tạo Phòng
+      🎮 Tạo Phòng
     </button>
   </form>
 
-  <form action="room/join" method="post" class="room-form">
+  <!-- Vào phòng (nhập mã phòng) -->
+  <form action="/room/go" method="post" class="room-form">
+    <c:if test="${not empty _csrf}">
+      <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+    </c:if>
     <input type="text" class="room-input" name="roomId" placeholder="Nhập mã phòng" maxlength="8" required />
     <button type="submit" class="btn btn-secondary" style="max-width: 150px;">
       <span style="display: inline-block; transform: translateY(2px);">🚪</span> Vào Phòng

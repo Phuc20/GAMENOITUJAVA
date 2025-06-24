@@ -14,13 +14,12 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeRequests(auth -> auth
-                        .antMatchers("/login").permitAll()
-                        .antMatchers("/register").permitAll()
+                        .antMatchers("/login", "/register", "/ws/**", "/css/**", "/js/**", "/images/**", "/error").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
                         .loginPage("/login")
-                        .defaultSuccessUrl("/home", true) // Chuyển về /home sau khi login thành công
+                        .successHandler(new UsernameSessionAuthenticationSuccessHandler())
                         .permitAll()
                 )
                 .logout(logout -> logout
