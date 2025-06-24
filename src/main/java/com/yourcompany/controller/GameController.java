@@ -76,7 +76,6 @@ public class GameController {
         return "play-room";
     }
 
-    // Gửi từ nối chữ
     @PostMapping("/room/{roomId}/play")
     public String playWord(@PathVariable String roomId, @RequestParam String word, HttpSession session, RedirectAttributes redirect) {
         String username = (String) session.getAttribute("username");
@@ -94,16 +93,15 @@ public class GameController {
             redirect.addFlashAttribute("error", "Bạn chưa nhập từ!");
             return "redirect:/room/" + roomId;
         }
-        if (!room.getWordHistory().isEmpty()) {
-            String lastWord = room.getWordHistory().get(room.getWordHistory().size() - 1);
-            if (lastWord.charAt(lastWord.length() - 1) != word.charAt(0)) {
-                redirect.addFlashAttribute("error", "Từ phải bắt đầu bằng chữ: " + lastWord.charAt(lastWord.length() - 1));
-                return "redirect:/room/" + roomId;
-            }
-            if (room.getWordHistory().contains(word)) {
-                redirect.addFlashAttribute("error", "Từ đã được dùng!");
-                return "redirect:/room/" + roomId;
-            }
+        // Dùng hàm kiểm tra của Room
+        if (!room.isValidNextPhrase(word)) {
+            String lastWord = room.getLastWordOfLastPhrase();
+            redirect.addFlashAttribute("error", "Cụm từ phải bắt đầu bằng từ: " + (lastWord != null ? lastWord : "?"));
+            return "redirect:/room/" + roomId;
+        }
+        if (room.isDuplicatePhrase(word)) {
+            redirect.addFlashAttribute("error", "Cụm từ này đã được dùng!");
+            return "redirect:/room/" + roomId;
         }
         room.addWord(word);
         room.setTurnIndex((room.getTurnIndex() + 1) % room.getMaxPlayers());
